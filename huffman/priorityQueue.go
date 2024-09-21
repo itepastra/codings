@@ -5,7 +5,6 @@ package huffman
 import (
 	"container/heap"
 	"fmt"
-	"log"
 )
 
 // An Item is something we manage in a priority queue.
@@ -70,7 +69,7 @@ func makeFromMap[T Queuable](items map[T]int) *PriorityQueue[T] {
 			priority: priority,
 			index:    i,
 		}
-		log.Printf("%s has priority %d and index %d", value, priority, i)
+		log.Debugf("%s has priority %d and index %d", value, priority, i)
 		i++
 	}
 	heap.Init(&pq)

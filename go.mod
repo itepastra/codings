@@ -2,4 +2,7 @@ module github.com/itepastra/codings
 
 go 1.22.6
 
-require github.com/bits-and-blooms/bitset v1.14.3
+require (
+	github.com/icza/bitio v1.1.0
+	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
+)

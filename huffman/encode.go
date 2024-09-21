@@ -3,47 +3,67 @@ package huffman
 import (
 	"container/heap"
 	"fmt"
-	"io"
-	"log"
 
-	"github.com/bits-and-blooms/bitset"
+	logging "github.com/op/go-logging"
+
+	"github.com/icza/bitio"
 )
 
-func Encode(text string, writer io.Writer) {
+var log = logging.MustGetLogger("encoder")
+
+func Encode(text string, writer *bitio.Writer) {
 	cm := countMap(text)
-	log.Print(cm)
+	log.Infof("count map is: %v", cm)
 
-	tree, _ := MkTree(cm)
-	log.Print(tree)
-	encs := tree.encodings("")
-	for _, enc := range encs {
-		log.Print(enc)
+	tree := MkTree(cm)
+	log.Infof("tree is: %v", tree)
+
+	if log.IsEnabledFor(logging.DEBUG) {
+		encs := tree.encodings("")
+		for _, enc := range encs {
+			log.Debug(enc)
+		}
 	}
 
-	mp := tree.makeMap(bitset.New(0))
+	mp := tree.makeMap([]bool{})
 
-	for k, v := range mp {
-		log.Print(k, v)
+	if log.IsEnabledFor(logging.DEBUG) {
+		for k, v := range mp {
+			log.Debug(k, v)
+		}
+		for _, byte := range []byte(text) {
+			log.Debugf("%s = %v", string(byte), mp[byte])
+		}
 	}
 
-	for _, byte := range []byte(text) {
-		log.Printf("%s = %s, len %d", string(byte), mp[byte], mp[byte].Len())
-		_, _ = (mp[byte]).WriteTo(writer)
+	// 0 -> level deeper
+	// 1 -> value -> byte
+	writer.Align()
+	tree.treeEncode(writer, true)
+
+	for _, char := range []byte(text) {
+		for _, bit := range mp[char] {
+			writer.WriteBool(bit)
+		}
 	}
 
+	_, err := writer.Align()
+	if err != nil {
+		log.Critical(err)
+	}
 }
 
-type hufTree struct {
-	val byte
-	l   *hufTree
-	r   *hufTree
-}
-
-func (h hufTree) String() string {
-	if h.l != nil && h.r != nil {
-		return fmt.Sprintf("(%s) (%s)", h.l, h.r)
+func (h hufTree) treeEncode(w *bitio.Writer, is_first bool) {
+	if is_first {
+		h.l.treeEncode(w, false)
+		h.r.treeEncode(w, false)
+	} else if h.l == nil && h.r == nil {
+		w.WriteBool(true)
+		w.WriteByte(h.val)
 	} else {
-		return fmt.Sprintf("%s", string(h.val))
+		w.WriteBool(false)
+		h.l.treeEncode(w, false)
+		h.r.treeEncode(w, false)
 	}
 }
 
@@ -55,26 +75,36 @@ func (h hufTree) encodings(prefix string) []string {
 	}
 }
 
-func (h hufTree) makeMap(prefix *bitset.BitSet) map[byte]*bitset.BitSet {
-	merr := make(map[byte]*bitset.BitSet)
+func (h hufTree) makeMap(prefix []bool) map[byte][]bool {
+	merr := make(map[byte][]bool)
+	log.Debugf("am at %v", h)
 
-	if h.l != nil && h.r != nil {
-		lprefix := prefix.Clone().SetTo(prefix.Len(), true)
+	if h.l == nil && h.r == nil {
+		if len(prefix) == 0 {
+			log.Debug("tree only has 1 value")
+			merr[h.val] = []bool{true}
+			return merr
+		}
+		log.Infof("letter '%s' is %v", string(h.val), prefix)
+		merr[h.val] = append([]bool{}, prefix...)
+	} else {
+		log.Debug("it's a tree")
+		lprefix := append(prefix, true)
 		for k, v := range h.l.makeMap(lprefix) {
 			merr[k] = v
 		}
-		rprefix := prefix.Clone().SetTo(prefix.Len(), false)
+		log.Debug("did the left")
+		rprefix := append(prefix, false)
 		for k, v := range h.r.makeMap(rprefix) {
 			merr[k] = v
 		}
-	} else {
-		merr[h.val] = prefix
+		log.Debug("did the right")
 	}
 
 	return merr
 }
 
-func MkTree(counts map[byte]int) (hufTree, bool) {
+func MkTree(counts map[byte]int) hufTree {
 
 	leafs := make(map[hufTree]int, len(counts))
 	for char, amount := range counts {
@@ -82,7 +112,11 @@ func MkTree(counts map[byte]int) (hufTree, bool) {
 	}
 
 	pq := makeFromMap(leafs)
-	log.Print(pq)
+
+	if (*pq).Len() == 1 {
+		log.Debug("heap only has 1 value")
+		return heap.Pop(pq).(*Item[hufTree]).value
+	}
 
 	for (*pq).Len() > 1 {
 		p1 := heap.Pop(pq).(*Item[hufTree])
@@ -94,16 +128,16 @@ func MkTree(counts map[byte]int) (hufTree, bool) {
 		heap.Push(pq, &newi)
 	}
 
-	tree, ok := heap.Pop(pq).(*Item[hufTree])
+	tree := heap.Pop(pq).(*Item[hufTree])
 
-	return tree.value, ok
+	return tree.value
 
 }
 
 func countMap(text string) map[byte]int {
 	bytemap := make(map[byte]int)
 	for i, byte := range []byte(text) {
-		log.Printf("byte %d is %s (%b)", i, string(byte), byte)
+		log.Debugf("byte %d is %s (%b)", i, string(byte), byte)
 		bytemap[byte] += 1
 	}
 
