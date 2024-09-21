@@ -34,9 +34,6 @@ func main() {
 		if err != nil {
 			log.Warning(err)
 		}
-		if text[len(text)-1] == '\n' {
-			text = text[:len(text)-1]
-		}
 		switch *t {
 		case "huffman":
 			huffman.Encode(text, bitWriter)
@@ -58,7 +55,7 @@ func main() {
 		case "huffman":
 			writer.Write(huffman.Decode(bitreader))
 		default:
-			log.Warning("encoding not supported")
+			log.Warningf("%s encoding not (yet) supported", *t)
 			return
 		}
 		writer.Flush()
