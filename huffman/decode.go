@@ -1,6 +1,10 @@
 package huffman
 
-import "github.com/icza/bitio"
+import (
+	"io"
+
+	"github.com/icza/bitio"
+)
 
 func Decode(r *bitio.Reader) []byte {
 	tree, err := gentree(r)
@@ -67,7 +71,9 @@ func (h hufTree) decode(r *bitio.Reader) []byte {
 		bit, err := r.ReadBits(1)
 		log.Debugf("bit is %d", bit)
 		if err != nil {
-			log.Warning(err)
+			if err != io.EOF {
+				log.Critical(err)
+			}
 			return text
 		}
 		if bit == 1 {

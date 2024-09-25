@@ -14,14 +14,12 @@ var log = logging.MustGetLogger("encoder")
 type datatriplet struct {
 	israw   bool
 	data    byte
-	triplet triplet
+	triplet duo
 }
 
-type triplet struct {
-	offset   int
-	length   int
-	next     bool
-	nextChar byte
+type duo struct {
+	offset int
+	length int
 }
 
 func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, writer *bitio.Writer) {
@@ -54,18 +52,20 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 			if length > breakeven {
 				newTriplet = datatriplet{
 					israw: false,
-					triplet: triplet{
-						offset:   offset,
-						length:   length,
-						next:     true,
-						nextChar: *nextChar,
+					triplet: duo{
+						offset: offset,
+						length: length,
 					},
 				}
+				codingPosition += length
+				searchEnd += length
 			} else {
 				newTriplet = datatriplet{
 					israw: true,
 					data:  lookahead[0],
 				}
+				codingPosition += 1
+				searchEnd += 1
 			}
 			encodedTriplets = append(encodedTriplets, newTriplet)
 		} else {
@@ -73,21 +73,22 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 			if length > breakeven {
 				newTriplet = datatriplet{
 					israw: false,
-					triplet: triplet{
+					triplet: duo{
 						offset: offset,
 						length: length,
-						next:   false,
 					}}
+				codingPosition += length
+				searchEnd += length
 			} else {
 				newTriplet = datatriplet{
 					israw: true,
 					data:  lookahead[0],
 				}
+				codingPosition += 1
+				searchEnd += 1
 			}
 			encodedTriplets = append(encodedTriplets, newTriplet)
 		}
-		codingPosition += length + 1
-		searchEnd += length + 1
 		searchStart = max(0, searchEnd-searchBufferLength)
 	}
 
@@ -120,30 +121,14 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 			if err != nil {
 				log.Critical(err)
 			}
-			if tri.next {
-				err := writer.WriteByte(tri.nextChar)
-				if err != nil {
-					log.Critical(err)
-				}
-			} else {
-				_, err := writer.Align()
-				if err != nil {
-					log.Critical(err)
-				}
-				return
-			}
 		}
 	}
 
 	return
 }
 
-func (t triplet) String() string {
-	if t.next {
-		return fmt.Sprintf("[ %d, %d, %+q ]", t.offset, t.length, string(t.nextChar))
-	} else {
-		return fmt.Sprintf("[ %d, %d, - ]", t.offset, t.length)
-	}
+func (t duo) String() string {
+	return fmt.Sprintf("[ %d, %d ]", t.offset, t.length)
 }
 
 func findMatch(search []byte, lookahead []byte, lookaheadLength int) (offset int, length int, next *byte) {

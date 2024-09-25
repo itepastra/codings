@@ -21,38 +21,32 @@ func Decode(r *bitio.Reader) []byte {
 	for {
 		israw, err := r.ReadBits(1)
 		if err != nil {
-			log.Criticalf("error reading rawbit: %e", err)
+			return textBuf
 		}
 		if israw == 1 {
+			log.Debugf("is raw")
 			nextchar, err := r.ReadByte()
 			if err != nil {
-				log.Criticalf("error reading nextchar: %e", err)
 				return textBuf
 			}
+			log.Debugf("israw: %+q", nextchar)
 			textBuf = append(textBuf, nextchar)
+			position += 1
 		} else {
+			log.Debugf("is not raw")
 			uoffset, err := r.ReadBits(offsetExp)
 			if err != nil {
-				log.Criticalf("error reading offset: %e", err)
+				return textBuf
 			}
 			offset := int(uoffset)
 			ulength, err := r.ReadBits(lengthExp)
 			if err != nil {
-				log.Criticalf("error reading length: %e", err)
-			}
-			length := int(ulength)
-			nextchar, err := r.ReadByte()
-			if err != nil {
-				log.Criticalf("error reading nextchar: %e", err)
 				return textBuf
 			}
-			log.Debugf("offset: %d, length %d, next %+q", offset, length, string(nextchar))
-			if length != 0 {
-				textBuf = append(textBuf, textBuf[(position-offset):(position-offset+length)]...)
-				position += length
-			}
-			textBuf = append(textBuf, nextchar)
-			position += 1
+			length := int(ulength)
+			log.Debugf("offset: %d, length %d", offset, length)
+			textBuf = append(textBuf, textBuf[(position-offset):(position-offset+length)]...)
+			position += length
 			log.Debug(textBuf)
 		}
 	}
