@@ -3,10 +3,12 @@ package main
 import (
 	"bufio"
 	"flag"
+	"io"
 	"os"
 
 	"github.com/icza/bitio"
 	"github.com/itepastra/codings/huffman"
+	"github.com/itepastra/codings/lz77"
 	logging "github.com/op/go-logging"
 )
 
