@@ -114,58 +114,7 @@ func main() {
 				huh.NewSelect[string]().
 					Value(&chosenType).
 					Height(10).
-					OptionsFunc(func() []huh.Option[string] {
-						options := []huh.Option[string]{}
-						ch := make(chan encoded, ENCODE_TYPES)
-						wg := sync.WaitGroup{}
-
-						for i := range ENCODE_TYPES {
-							wg.Add(1)
-							go func(instance int, channel chan encoded, waitgroup *sync.WaitGroup) {
-								defer waitgroup.Done()
-								var name string
-								buf := bytes.NewBuffer([]byte{})
-								bitio := bitio.NewWriter(buf)
-								switch instance {
-								case 0:
-									name = "huffman"
-									huffman.Encode(fileText, bitio)
-								case 1:
-									name = "lz77 (16, 8)"
-									lz77.Encode(fileText, 16, 8, bitio)
-								case 2:
-									name = "lz77 (8, 4)"
-									lz77.Encode(fileText, 8, 4, bitio)
-								case 3:
-									name = "lz77 (4, 4)"
-									lz77.Encode(fileText, 4, 4, bitio)
-								case 4:
-									name = "lzss (16, 8)"
-									lzss.Encode(fileText, 16, 8, bitio)
-								case 5:
-									name = "lzss (8, 4)"
-									lzss.Encode(fileText, 8, 4, bitio)
-								case 6:
-									name = "lzss (4, 4)"
-									lzss.Encode(fileText, 4, 4, bitio)
-								}
-								_, err := bitio.Align()
-								if err != nil {
-									log.Warningf("encoding error with %s (%e)", name, err)
-								}
-								channel <- encoded{name, buf.Bytes()}
-								return
-							}(i, ch, &wg)
-						}
-
-						wg.Wait()
-						close(ch)
-						for enc := range ch {
-							options = append(options, huh.NewOption(fmt.Sprintf("%s (%dB)", enc.codec, len(enc.data)), string(enc.data)))
-						}
-
-						return options
-					}, &fileText),
+					OptionsFunc(func() []huh.Option[string] { return compressionOptions(fileText) }, &fileText),
 			),
 		)
 
@@ -174,4 +123,57 @@ func main() {
 			log.Critical(err)
 		}
 	}
+}
+
+func compressionOptions(fileText []byte) []huh.Option[string] {
+	options := []huh.Option[string]{}
+	ch := make(chan encoded, ENCODE_TYPES)
+	wg := sync.WaitGroup{}
+
+	for i := range ENCODE_TYPES {
+		wg.Add(1)
+		go func(instance int, channel chan encoded, waitgroup *sync.WaitGroup) {
+			defer waitgroup.Done()
+			var name string
+			buf := bytes.NewBuffer([]byte{})
+			bitio := bitio.NewWriter(buf)
+			switch instance {
+			case 0:
+				name = "huffman"
+				huffman.Encode(fileText, bitio)
+			case 1:
+				name = "lz77 (16, 8)"
+				lz77.Encode(fileText, 16, 8, bitio)
+			case 2:
+				name = "lz77 (8, 4)"
+				lz77.Encode(fileText, 8, 4, bitio)
+			case 3:
+				name = "lz77 (4, 4)"
+				lz77.Encode(fileText, 4, 4, bitio)
+			case 4:
+				name = "lzss (16, 8)"
+				lzss.Encode(fileText, 16, 8, bitio)
+			case 5:
+				name = "lzss (8, 4)"
+				lzss.Encode(fileText, 8, 4, bitio)
+			case 6:
+				name = "lzss (4, 4)"
+				lzss.Encode(fileText, 4, 4, bitio)
+			}
+			_, err := bitio.Align()
+			if err != nil {
+				log.Warningf("encoding error with %s (%e)", name, err)
+			}
+			channel <- encoded{name, buf.Bytes()}
+			return
+		}(i, ch, &wg)
+	}
+
+	wg.Wait()
+	close(ch)
+	for enc := range ch {
+		options = append(options, huh.NewOption(fmt.Sprintf("%s (%dB)", enc.codec, len(enc.data)), string(enc.data)))
+	}
+
+	return options
 }
