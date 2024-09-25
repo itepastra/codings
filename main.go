@@ -13,6 +13,7 @@ import (
 	"github.com/icza/bitio"
 	"github.com/itepastra/codings/huffman"
 	"github.com/itepastra/codings/lz77"
+	"github.com/itepastra/codings/lzss"
 	logging "github.com/op/go-logging"
 )
 
@@ -29,7 +30,7 @@ var offsetBits = flag.Int("offset", 16, "how many bits should be used for the of
 
 var debug = flag.Bool("debug", false, "should enable debug output")
 
-const ENCODE_TYPES = 4
+const ENCODE_TYPES = 7
 
 type encoded struct {
 	codec string
@@ -138,6 +139,15 @@ func main() {
 								case 3:
 									name = "lz77 (4, 4)"
 									lz77.Encode(fileText, 4, 4, bitio)
+								case 4:
+									name = "lzss (16, 8)"
+									lzss.Encode(fileText, 16, 8, bitio)
+								case 5:
+									name = "lzss (8, 4)"
+									lzss.Encode(fileText, 8, 4, bitio)
+								case 6:
+									name = "lzss (4, 4)"
+									lzss.Encode(fileText, 4, 4, bitio)
 								}
 								_, err := bitio.Align()
 								if err != nil {
