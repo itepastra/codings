@@ -36,13 +36,12 @@ func main() {
 	}
 
 	if *encode {
-		reader := bufio.NewReader(os.Stdin)
-		writer := bufio.NewWriter(os.Stdout)
-		bitWriter := bitio.NewWriter(writer)
-		text, err := reader.ReadString(0x00)
+		text, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			log.Warning(err)
 		}
+		writer := bufio.NewWriter(os.Stdout)
+		bitWriter := bitio.NewWriter(writer)
 		switch *codec {
 		case "huffman":
 			huffman.Encode(text, bitWriter)

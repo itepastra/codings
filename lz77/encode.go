@@ -17,7 +17,7 @@ type triplet struct {
 	nextChar byte
 }
 
-func Encode(text string, searchBufferLengthExp byte, lookaheadLengthExp byte, writer *bitio.Writer) {
+func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, writer *bitio.Writer) {
 	if searchBufferLengthExp > 63 {
 		log.Criticalf("searchbuffer exponent (%d) not allowed", searchBufferLengthExp)
 		return

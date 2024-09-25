@@ -11,7 +11,7 @@ import (
 
 var log = logging.MustGetLogger("encoder")
 
-func Encode(text string, writer *bitio.Writer) {
+func Encode(text []byte, writer *bitio.Writer) {
 	cm := countMap(text)
 	log.Infof("count map is: %v", cm)
 
@@ -134,9 +134,9 @@ func MkTree(counts map[byte]int) hufTree {
 
 }
 
-func countMap(text string) map[byte]int {
+func countMap(text []byte) map[byte]int {
 	bytemap := make(map[byte]int)
-	for i, byte := range []byte(text) {
+	for i, byte := range text {
 		log.Debugf("byte %d is %s (%b)", i, string(byte), byte)
 		bytemap[byte] += 1
 	}
