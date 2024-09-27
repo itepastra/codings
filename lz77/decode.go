@@ -51,7 +51,7 @@ func lzExtend(buf []byte, position int, offset int, length int) []byte {
 	if position-offset >= 0 && length != 0 {
 		if position-offset+length <= len(buf) {
 			buf = append(buf, buf[(position-offset):(position-offset+length)]...)
-		} else {
+		} else if position-offset < len(buf) {
 			for i := range length {
 				buf = append(buf, buf[position-offset+i])
 			}
