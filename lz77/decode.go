@@ -1,6 +1,10 @@
 package lz77
 
-import "github.com/icza/bitio"
+import (
+	"io"
+
+	"github.com/icza/bitio"
+)
 
 func Decode(r *bitio.Reader) []byte {
 	offsetExpTemp, err := r.ReadBits(6)
@@ -31,14 +35,27 @@ func Decode(r *bitio.Reader) []byte {
 		length := int(ulength)
 		nextchar, err := r.ReadByte()
 		if err != nil {
+			if err == io.EOF {
+				textBuf = lzExtend(textBuf, position, offset, length)
+			}
 			return textBuf
 		}
 		log.Debugf("offset: %d, length %d, next %+q", offset, length, string(nextchar))
-		if length != 0 && position-offset >= 0 && position-offset+length <= len(textBuf) {
-			textBuf = append(textBuf, textBuf[(position-offset):(position-offset+length)]...)
-			position += length
-		}
+		textBuf = lzExtend(textBuf, position, offset, length)
 		textBuf = append(textBuf, nextchar)
-		position += 1
+		position += length + 1
 	}
+}
+
+func lzExtend(buf []byte, position int, offset int, length int) []byte {
+	if position-offset >= 0 && length != 0 {
+		if position-offset+length <= len(buf) {
+			buf = append(buf, buf[(position-offset):(position-offset+length)]...)
+		} else {
+			for i := range length {
+				buf = append(buf, buf[position-offset+i])
+			}
+		}
+	}
+	return buf
 }

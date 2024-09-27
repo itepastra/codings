@@ -12,6 +12,7 @@ import (
 )
 
 func TestHufEncodeDecode(t *testing.T) {
+	t.Parallel()
 	buf := bytes.NewBuffer([]byte{})
 	for range 10000 {
 		buf.WriteByte(byte(rand.N(93) + 33))

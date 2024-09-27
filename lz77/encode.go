@@ -43,10 +43,13 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 		codingPosition += length + 1
 		searchEnd += length + 1
 		searchStart = max(0, searchEnd-searchBufferLength)
-		if nextChar != nil {
+		if codingPosition > len(textBytes) {
+			encodedTriplets = append(encodedTriplets, triplet{offset: offset, length: length, next: false})
+		} else if nextChar != nil {
 			log.Debugf("nextchar is %+q", string(*nextChar))
 			encodedTriplets = append(encodedTriplets, triplet{offset: offset, length: length, next: true, nextChar: *nextChar})
 		} else {
+			log.Critical("somehow there was not nextcharacter but we're not at the end")
 			encodedTriplets = append(encodedTriplets, triplet{offset: offset, length: length, next: false})
 		}
 	}

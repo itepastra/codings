@@ -11,7 +11,33 @@ import (
 	testinghelpers "github.com/itepastra/codings/testing_helpers"
 )
 
+var explicits = [][]byte{
+	[]byte("aaaaaaaaaaaaaaaaaa"),
+}
+
+func TestLzssEncodeDecodeSet(t *testing.T) {
+	t.Parallel()
+	for _, explicit := range explicits {
+		encoded := bytes.NewBuffer([]byte{})
+		encodeBits := bitio.NewWriter(encoded)
+		lzss.Encode(explicit, 16, 8, encodeBits)
+
+		decodeBits := bitio.NewReader(encoded)
+		decoded := lzss.Decode(decodeBits)
+
+		if len(decoded) != len(explicit) {
+			t.Logf("decoded had length %d, while the buffer had length %d", len(decoded), len(explicit))
+			t.FailNow()
+		}
+
+		for i, byte := range explicit {
+			testinghelpers.ExpectEqual(t, decoded[i], byte, fmt.Sprint(i))
+		}
+	}
+}
+
 func TestLzssEncodeDecodeShort(t *testing.T) {
+	t.Parallel()
 	buf := bytes.NewBuffer([]byte{})
 	for range 100 {
 		buf.WriteByte(byte(rand.N(93) + 33))
@@ -36,6 +62,7 @@ func TestLzssEncodeDecodeShort(t *testing.T) {
 }
 
 func TestLzssEncodeDecodeLong(t *testing.T) {
+	t.Parallel()
 	buf := bytes.NewBuffer([]byte{})
 	for range 1000 {
 		buf.WriteByte(byte(rand.N(93) + 33))
@@ -56,29 +83,5 @@ func TestLzssEncodeDecodeLong(t *testing.T) {
 
 	for i, byte := range buf.Bytes() {
 		testinghelpers.ExpectEqual(t, decoded[i], byte, fmt.Sprint(i))
-	}
-}
-
-var explicits = [][]byte{
-	[]byte("aaaaaaaaaaaaaaaaaa"),
-}
-
-func TestLzssEncodeDecodeSet(t *testing.T) {
-	for _, explicit := range explicits {
-		encoded := bytes.NewBuffer([]byte{})
-		encodeBits := bitio.NewWriter(encoded)
-		lzss.Encode(explicit, 16, 8, encodeBits)
-
-		decodeBits := bitio.NewReader(encoded)
-		decoded := lzss.Decode(decodeBits)
-
-		if len(decoded) != len(explicit) {
-			t.Logf("decoded had length %d, while the buffer had length %d", len(decoded), len(explicit))
-			t.FailNow()
-		}
-
-		for i, byte := range explicit {
-			testinghelpers.ExpectEqual(t, decoded[i], byte, fmt.Sprint(i))
-		}
 	}
 }
