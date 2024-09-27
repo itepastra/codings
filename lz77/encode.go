@@ -56,7 +56,6 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 	writer.WriteBits(uint64(searchBufferLengthExp), 6)
 	writer.WriteBits(uint64(lookaheadLengthExp), 6)
 	for _, tri := range encodedTriplets {
-		log.Debugf("writing offset %d, writing length %d", tri.offset, tri.length)
 		err := writer.WriteBits(uint64(tri.offset), searchBufferLengthExp)
 		if err != nil {
 			log.Critical(err)
@@ -71,6 +70,7 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 				log.Critical(err)
 			}
 		} else {
+			log.Debug("returning because there is no next")
 			_, err := writer.Align()
 			if err != nil {
 				log.Critical(err)
@@ -79,6 +79,11 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 		}
 	}
 
+	log.Debug("returning because done")
+	_, err := writer.Align()
+	if err != nil {
+		log.Critical(err)
+	}
 	return
 }
 

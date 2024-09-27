@@ -124,6 +124,10 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 		}
 	}
 
+	_, err := writer.Align()
+	if err != nil {
+		log.Critical(err)
+	}
 	return
 }
 

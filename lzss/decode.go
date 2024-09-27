@@ -27,6 +27,7 @@ func Decode(r *bitio.Reader) []byte {
 			log.Debugf("is raw")
 			nextchar, err := r.ReadByte()
 			if err != nil {
+				log.Critical(err)
 				return textBuf
 			}
 			log.Debugf("israw: %+q", nextchar)
@@ -45,7 +46,13 @@ func Decode(r *bitio.Reader) []byte {
 			}
 			length := int(ulength)
 			log.Debugf("offset: %d, length %d", offset, length)
-			textBuf = append(textBuf, textBuf[(position-offset):(position-offset+length)]...)
+			if position-offset+length <= len(textBuf) {
+				textBuf = append(textBuf, textBuf[(position-offset):(position-offset+length)]...)
+			} else {
+				for i := range length {
+					textBuf = append(textBuf, textBuf[position-offset+i])
+				}
+			}
 			position += length
 			log.Debug(textBuf)
 		}

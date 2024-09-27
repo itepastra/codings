@@ -34,12 +34,11 @@ func Decode(r *bitio.Reader) []byte {
 			return textBuf
 		}
 		log.Debugf("offset: %d, length %d, next %+q", offset, length, string(nextchar))
-		if length != 0 && position-offset >= 0 && position-offset+length < len(textBuf) {
+		if length != 0 && position-offset >= 0 && position-offset+length <= len(textBuf) {
 			textBuf = append(textBuf, textBuf[(position-offset):(position-offset+length)]...)
 			position += length
 		}
 		textBuf = append(textBuf, nextchar)
 		position += 1
-		log.Debug(textBuf)
 	}
 }
