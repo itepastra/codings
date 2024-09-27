@@ -117,7 +117,7 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 			if err != nil {
 				log.Critical(err)
 			}
-			err = writer.WriteBits(uint64(tri.length), lookaheadLengthExp)
+			err = writer.WriteBits(uint64(tri.length-1), lookaheadLengthExp)
 			if err != nil {
 				log.Critical(err)
 			}

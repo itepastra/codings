@@ -44,7 +44,7 @@ func Decode(r *bitio.Reader) []byte {
 			if err != nil {
 				return textBuf
 			}
-			length := int(ulength)
+			length := int(ulength) + 1
 			log.Debugf("offset: %d, length %d", offset, length)
 			if position-offset+length <= len(textBuf) {
 				textBuf = append(textBuf, textBuf[(position-offset):(position-offset+length)]...)
