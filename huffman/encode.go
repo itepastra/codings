@@ -3,19 +3,20 @@ package huffman
 import (
 	"container/heap"
 	"fmt"
+	"io"
 
 	logging "github.com/op/go-logging"
 
 	"github.com/icza/bitio"
 )
 
-var log = logging.MustGetLogger("encoder")
-
-func Encode(text []byte, writer *bitio.Writer) {
+func (h Huffman) Encode(text []byte, writer io.Writer) {
 	cm := countMap(text)
 	log.Infof("count map is: %v", cm)
 
-	tree := MkTree(cm)
+	bitwriter := bitio.NewWriter(writer)
+
+	tree := makeTree(cm)
 	log.Infof("tree is: %v", tree)
 
 	if log.IsEnabledFor(logging.DEBUG) {
@@ -38,16 +39,15 @@ func Encode(text []byte, writer *bitio.Writer) {
 
 	// 0 -> level deeper
 	// 1 -> value -> byte
-	writer.Align()
-	tree.treeEncode(writer, true)
+	tree.treeEncode(bitwriter, true)
 
 	for _, char := range []byte(text) {
 		for _, bit := range mp[char] {
-			writer.WriteBool(bit)
+			bitwriter.WriteBool(bit)
 		}
 	}
 
-	_, err := writer.Align()
+	_, err := bitwriter.Align()
 	if err != nil {
 		log.Critical(err)
 	}
@@ -104,7 +104,7 @@ func (h hufTree) makeMap(prefix []bool) map[byte][]bool {
 	return merr
 }
 
-func MkTree(counts map[byte]int) hufTree {
+func makeTree(counts map[byte]int) hufTree {
 
 	leafs := make(map[hufTree]int, len(counts))
 	for char, amount := range counts {

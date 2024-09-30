@@ -20,12 +20,14 @@ func TestHufEncodeDecode(t *testing.T) {
 
 	t.Logf("the input text is: %s", string(buf.Bytes()))
 
+	encoder := huffman.Huffman{}
 	encoded := bytes.NewBuffer([]byte{})
 	encodeBits := bitio.NewWriter(encoded)
-	huffman.Encode(buf.Bytes(), encodeBits)
+	encoder.Encode(buf.Bytes(), encodeBits)
 
+	decoder := huffman.Huffman{}
 	decodeBits := bitio.NewReader(encoded)
-	decoded := huffman.Decode(decodeBits)
+	decoded := decoder.Decode(decodeBits)
 
 	for i, byte := range buf.Bytes() {
 		testinghelpers.ExpectEqual(t, decoded[i], byte, fmt.Sprint(i))

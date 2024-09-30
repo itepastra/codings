@@ -11,6 +11,7 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/icza/bitio"
+	"github.com/itepastra/codings/common"
 	"github.com/itepastra/codings/huffman"
 	"github.com/itepastra/codings/lz77"
 	"github.com/itepastra/codings/lzss"
@@ -56,34 +57,44 @@ func main() {
 			log.Warning(err)
 		}
 		writer := bufio.NewWriter(os.Stdout)
-		bitWriter := bitio.NewWriter(writer)
+		var encoder common.Encoder
 		switch *codec {
 		case "huffman":
-			huffman.Encode(text, bitWriter)
+			encoder = huffman.Huffman{}
+			encoder.Encode(text, writer)
 		case "lz77":
+			bitWriter := bitio.NewWriter(writer)
 			lz77.Encode(text, byte(*offsetBits), byte(*lengthBits), bitWriter)
+			err = bitWriter.Close()
+			if err != nil {
+				log.Critical(err)
+			}
 		case "lzss":
+			bitWriter := bitio.NewWriter(writer)
 			lzss.Encode(text, byte(*offsetBits), byte(*lengthBits), bitWriter)
+			err = bitWriter.Close()
+			if err != nil {
+				log.Critical(err)
+			}
 		default:
 			log.Warning("encoding not supported")
 			return
 		}
 
-		err = bitWriter.Close()
-		if err != nil {
-			log.Critical(err)
-		}
 		writer.Flush()
 	} else if *decode {
 		reader := bufio.NewReader(os.Stdin)
 		writer := bufio.NewWriter(os.Stdout)
-		bitreader := bitio.NewReader(reader)
+		var decoder common.Decoder
 		switch *codec {
 		case "huffman":
-			writer.Write(huffman.Decode(bitreader))
+			decoder = huffman.Huffman{}
+			writer.Write(decoder.Decode(reader))
 		case "lz77":
+			bitreader := bitio.NewReader(reader)
 			writer.Write(lz77.Decode(bitreader))
 		case "lzss":
+			bitreader := bitio.NewReader(reader)
 			writer.Write(lzss.Decode(bitreader))
 		default:
 			log.Warningf("%s encoding not (yet) supported", *codec)
@@ -160,34 +171,61 @@ func compressionOptions(fileText []byte, compress bool) []huh.Option[string] {
 			go func(instance int, channel chan encoded, waitgroup *sync.WaitGroup) {
 				defer waitgroup.Done()
 				var name string
+				var encoder common.Encoder
 				buf := bytes.NewBuffer([]byte{})
-				bitio := bitio.NewWriter(buf)
 				switch instance {
 				case 0:
 					name = "huffman"
-					huffman.Encode(fileText, bitio)
+					encoder = huffman.Huffman{}
+					encoder.Encode(fileText, buf)
 				case 1:
 					name = "lz77 (16, 8)"
+					bitio := bitio.NewWriter(buf)
 					lz77.Encode(fileText, 16, 8, bitio)
+					_, err := bitio.Align()
+					if err != nil {
+						log.Warningf("encoding error with %s (%e)", name, err)
+					}
 				case 2:
 					name = "lz77 (8, 4)"
+					bitio := bitio.NewWriter(buf)
 					lz77.Encode(fileText, 8, 4, bitio)
+					_, err := bitio.Align()
+					if err != nil {
+						log.Warningf("encoding error with %s (%e)", name, err)
+					}
 				case 3:
 					name = "lz77 (4, 4)"
+					bitio := bitio.NewWriter(buf)
 					lz77.Encode(fileText, 4, 4, bitio)
+					_, err := bitio.Align()
+					if err != nil {
+						log.Warningf("encoding error with %s (%e)", name, err)
+					}
 				case 4:
 					name = "lzss (16, 8)"
+					bitio := bitio.NewWriter(buf)
 					lzss.Encode(fileText, 16, 8, bitio)
+					_, err := bitio.Align()
+					if err != nil {
+						log.Warningf("encoding error with %s (%e)", name, err)
+					}
 				case 5:
 					name = "lzss (8, 4)"
+					bitio := bitio.NewWriter(buf)
 					lzss.Encode(fileText, 8, 4, bitio)
+					_, err := bitio.Align()
+					if err != nil {
+						log.Warningf("encoding error with %s (%e)", name, err)
+					}
 				case 6:
 					name = "lzss (4, 4)"
+					bitio := bitio.NewWriter(buf)
 					lzss.Encode(fileText, 4, 4, bitio)
-				}
-				_, err := bitio.Align()
-				if err != nil {
-					log.Warningf("encoding error with %s (%e)", name, err)
+					_, err := bitio.Align()
+					if err != nil {
+						log.Warningf("encoding error with %s (%e)", name, err)
+					}
 				}
 				channel <- encoded{name, buf.Bytes()}
 				return
@@ -211,12 +249,14 @@ func compressionOptions(fileText []byte, compress bool) []huh.Option[string] {
 				defer waitgroup.Done()
 				var name string
 				var output []byte
+				var decoder common.Decoder
 				buf := bytes.NewBuffer(fileText)
 				bitio := bitio.NewReader(buf)
 				switch instance {
 				case 0:
 					name = "huffman"
-					output = huffman.Decode(bitio)
+					decoder = huffman.Huffman{}
+					output = decoder.Decode(bitio)
 				case 1:
 					name = "lz77"
 					output = lz77.Decode(bitio)

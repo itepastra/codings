@@ -6,13 +6,14 @@ import (
 	"github.com/icza/bitio"
 )
 
-func Decode(r *bitio.Reader) []byte {
-	tree, err := gentree(r)
+func (h Huffman) Decode(r io.Reader) []byte {
+	bitreader := bitio.NewReader(r)
+	tree, err := gentree(bitreader)
 	if err != nil {
 		log.Critical("decoding error")
 	}
 
-	text := tree.decode(r)
+	text := tree.decode(bitreader)
 	log.Info(text)
 
 	return text
