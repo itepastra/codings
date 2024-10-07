@@ -4,36 +4,39 @@ import (
 	"io"
 
 	"github.com/icza/bitio"
+	"github.com/itepastra/codings/common"
 )
 
-func Decode(r *bitio.Reader) []byte {
-	offsetExpTemp, err := r.ReadBits(6)
+func (lz LZ77) Decode(reader io.Reader) []byte {
+	defer common.HandleDecodePanic(log)
+	bitreader := bitio.NewReader(reader)
+	offsetExpTemp, err := bitreader.ReadBits(6)
 	if err != nil {
 		log.Criticalf("offsetExp error %e", err)
 	}
-	offsetExp := byte(offsetExpTemp)
-	lengthExpTemp, err := r.ReadBits(6)
+	lz.OffsetBits = byte(offsetExpTemp)
+	lengthExpTemp, err := bitreader.ReadBits(6)
 	if err != nil {
 		log.Criticalf("lengthExp error %e", err)
 	}
-	lengthExp := byte(lengthExpTemp)
-	log.Debugf("offset bits: %d, length bits: %d", offsetExp, lengthExp)
+	lz.LengthBits = byte(lengthExpTemp)
+	log.Debugf("offset bits: %d, length bits: %d", lz.OffsetBits, lz.LengthBits)
 
 	textBuf := []byte{}
 	position := 0
 
 	for {
-		uoffset, err := r.ReadBits(offsetExp)
+		uoffset, err := bitreader.ReadBits(lz.OffsetBits)
 		if err != nil {
 			return textBuf
 		}
 		offset := int(uoffset)
-		ulength, err := r.ReadBits(lengthExp)
+		ulength, err := bitreader.ReadBits(lz.LengthBits)
 		if err != nil {
 			return textBuf
 		}
 		length := int(ulength)
-		nextchar, err := r.ReadByte()
+		nextchar, err := bitreader.ReadByte()
 		if err != nil {
 			if err == io.EOF {
 				textBuf = lzExtend(textBuf, position, offset, length)

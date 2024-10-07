@@ -3,10 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
-    templ = {
-      url = "github:a-h/templ";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     gitignore = {
       url = "github:hercules-ci/gitignore.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -17,7 +13,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, gitignore, gomod2nix, templ, ... }:
+  outputs = { self, nixpkgs, gitignore, gomod2nix, ... }:
     let
       allSystems = [
         "x86_64-linux" # 64-bit Intel/AMD Linux
@@ -59,7 +55,6 @@
       # `nix develop` provides a shell containing development tools.
       devShell = forAllSystems ({ system, pkgs }:
         let
-          templPkg = templ.packages.${system}.templ;
           gomod2nixPkg = gomod2nix.legacyPackages.${system}.gomod2nix;
         in
         pkgs.mkShell {
@@ -71,7 +66,6 @@
             goreleaser
             gotestsum
             ko # Used to build Docker images.
-            templPkg
             gomod2nixPkg
             wgo
           ];

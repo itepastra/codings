@@ -19,11 +19,12 @@ func TestLz77EncodeDecodeSet(t *testing.T) {
 	t.Parallel()
 	for _, explicit := range explicits {
 		encoded := bytes.NewBuffer([]byte{})
-		encodeBits := bitio.NewWriter(encoded)
-		lz77.Encode(explicit, 16, 8, encodeBits)
+		encoder := lz77.LZ77{OffsetBits: 16, LengthBits: 8}
+		encoder.Encode(explicit, encoded)
 
+		decoder := lz77.LZ77{}
 		decodeBits := bitio.NewReader(encoded)
-		decoded := lz77.Decode(decodeBits)
+		decoded := decoder.Decode(decodeBits)
 
 		if len(decoded) != len(explicit) {
 			t.Logf("decoded had length %d, while the buffer had length %d", len(decoded), len(explicit))
@@ -45,11 +46,12 @@ func TestLz77EncodeDecodeShort(t *testing.T) {
 	t.Logf("the input text is: %s", string(buf.Bytes()))
 
 	encoded := bytes.NewBuffer([]byte{})
-	encodeBits := bitio.NewWriter(encoded)
-	lz77.Encode(buf.Bytes(), 16, 8, encodeBits)
+	encoder := lz77.LZ77{OffsetBits: 16, LengthBits: 8}
+	encoder.Encode(buf.Bytes(), encoded)
 
+	decoder := lz77.LZ77{}
 	decodeBits := bitio.NewReader(encoded)
-	decoded := lz77.Decode(decodeBits)
+	decoded := decoder.Decode(decodeBits)
 
 	for i, byte := range buf.Bytes() {
 		testinghelpers.ExpectEqual(t, decoded[i], byte, fmt.Sprint(i))
@@ -65,11 +67,12 @@ func TestLz77EncodeDecodeLong(t *testing.T) {
 	t.Logf("the input text is: %s", string(buf.Bytes()))
 
 	encoded := bytes.NewBuffer([]byte{})
-	encodeBits := bitio.NewWriter(encoded)
-	lz77.Encode(buf.Bytes(), 16, 8, encodeBits)
+	encoder := lz77.LZ77{OffsetBits: 16, LengthBits: 8}
+	encoder.Encode(buf.Bytes(), encoded)
 
+	decoder := lz77.LZ77{}
 	decodeBits := bitio.NewReader(encoded)
-	decoded := lz77.Decode(decodeBits)
+	decoded := decoder.Decode(decodeBits)
 
 	for i, byte := range buf.Bytes() {
 		testinghelpers.ExpectEqual(t, decoded[i], byte, fmt.Sprint(i))

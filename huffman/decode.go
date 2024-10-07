@@ -4,9 +4,11 @@ import (
 	"io"
 
 	"github.com/icza/bitio"
+	"github.com/itepastra/codings/common"
 )
 
 func (h Huffman) Decode(r io.Reader) []byte {
+	defer common.HandleDecodePanic(log)
 	bitreader := bitio.NewReader(r)
 	tree, err := gentree(bitreader)
 	if err != nil {

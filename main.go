@@ -63,12 +63,8 @@ func main() {
 			encoder = huffman.Huffman{}
 			encoder.Encode(text, writer)
 		case "lz77":
-			bitWriter := bitio.NewWriter(writer)
-			lz77.Encode(text, byte(*offsetBits), byte(*lengthBits), bitWriter)
-			err = bitWriter.Close()
-			if err != nil {
-				log.Critical(err)
-			}
+			encoder = lz77.LZ77{OffsetBits: byte(*offsetBits), LengthBits: byte(*lengthBits)}
+			encoder.Encode(text, writer)
 		case "lzss":
 			bitWriter := bitio.NewWriter(writer)
 			lzss.Encode(text, byte(*offsetBits), byte(*lengthBits), bitWriter)
@@ -91,8 +87,8 @@ func main() {
 			decoder = huffman.Huffman{}
 			writer.Write(decoder.Decode(reader))
 		case "lz77":
-			bitreader := bitio.NewReader(reader)
-			writer.Write(lz77.Decode(bitreader))
+			decoder = lz77.LZ77{}
+			writer.Write(decoder.Decode(reader))
 		case "lzss":
 			bitreader := bitio.NewReader(reader)
 			writer.Write(lzss.Decode(bitreader))
@@ -180,28 +176,16 @@ func compressionOptions(fileText []byte, compress bool) []huh.Option[string] {
 					encoder.Encode(fileText, buf)
 				case 1:
 					name = "lz77 (16, 8)"
-					bitio := bitio.NewWriter(buf)
-					lz77.Encode(fileText, 16, 8, bitio)
-					_, err := bitio.Align()
-					if err != nil {
-						log.Warningf("encoding error with %s (%e)", name, err)
-					}
+					encoder = lz77.LZ77{OffsetBits: 16, LengthBits: 8}
+					encoder.Encode(fileText, buf)
 				case 2:
 					name = "lz77 (8, 4)"
-					bitio := bitio.NewWriter(buf)
-					lz77.Encode(fileText, 8, 4, bitio)
-					_, err := bitio.Align()
-					if err != nil {
-						log.Warningf("encoding error with %s (%e)", name, err)
-					}
+					encoder = lz77.LZ77{OffsetBits: 8, LengthBits: 4}
+					encoder.Encode(fileText, buf)
 				case 3:
 					name = "lz77 (4, 4)"
-					bitio := bitio.NewWriter(buf)
-					lz77.Encode(fileText, 4, 4, bitio)
-					_, err := bitio.Align()
-					if err != nil {
-						log.Warningf("encoding error with %s (%e)", name, err)
-					}
+					encoder = lz77.LZ77{OffsetBits: 4, LengthBits: 4}
+					encoder.Encode(fileText, buf)
 				case 4:
 					name = "lzss (16, 8)"
 					bitio := bitio.NewWriter(buf)
@@ -256,10 +240,11 @@ func compressionOptions(fileText []byte, compress bool) []huh.Option[string] {
 				case 0:
 					name = "huffman"
 					decoder = huffman.Huffman{}
-					output = decoder.Decode(bitio)
+					output = decoder.Decode(buf)
 				case 1:
 					name = "lz77"
-					output = lz77.Decode(bitio)
+					decoder = lz77.LZ77{}
+					output = decoder.Decode(buf)
 				case 2:
 					name = "lzss"
 					output = lzss.Decode(bitio)

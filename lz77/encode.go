@@ -2,13 +2,11 @@ package lz77
 
 import (
 	"fmt"
+	"io"
 	"slices"
 
 	"github.com/icza/bitio"
-	"github.com/op/go-logging"
 )
-
-var log = logging.MustGetLogger("encoder")
 
 type triplet struct {
 	offset   int
@@ -17,23 +15,27 @@ type triplet struct {
 	nextChar byte
 }
 
-func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, writer *bitio.Writer) {
-	if searchBufferLengthExp > 63 {
-		log.Criticalf("searchbuffer exponent (%d) not allowed", searchBufferLengthExp)
+func (lz LZ77) Encode(text []byte, writer io.Writer) {
+	if lz.OffsetBits > 63 {
+		log.Criticalf("searchbuffer exponent (%d) not allowed", lz.OffsetBits)
 		return
 	}
-	if lookaheadLengthExp > 63 {
-		log.Criticalf("lookahead exponent (%d) not allowed", lookaheadLengthExp)
+	if lz.LengthBits > 63 {
+		log.Criticalf("lookahead exponent (%d) not allowed", lz.LengthBits)
 		return
 	}
+
+	bitwriter := bitio.NewWriter(writer)
+	defer bitwriter.Close()
+
 	textBytes := []byte(text)
 	searchStart := 0
 	searchEnd := 0
 	codingPosition := 0
 	encodedTriplets := []triplet{}
 
-	searchBufferLength := 1 << int(searchBufferLengthExp)
-	lookaheadLength := 1 << int(lookaheadLengthExp)
+	searchBufferLength := 1 << int(lz.OffsetBits)
+	lookaheadLength := 1 << int(lz.LengthBits)
 
 	for codingPosition < len(textBytes) {
 		lookahead_end := min(codingPosition+lookaheadLength+1, len(textBytes))
@@ -56,25 +58,25 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 
 	log.Infof("triplets %v", encodedTriplets)
 
-	writer.WriteBits(uint64(searchBufferLengthExp), 6)
-	writer.WriteBits(uint64(lookaheadLengthExp), 6)
+	bitwriter.WriteBits(uint64(lz.OffsetBits), 6)
+	bitwriter.WriteBits(uint64(lz.LengthBits), 6)
 	for _, tri := range encodedTriplets {
-		err := writer.WriteBits(uint64(tri.offset), searchBufferLengthExp)
+		err := bitwriter.WriteBits(uint64(tri.offset), lz.OffsetBits)
 		if err != nil {
 			log.Critical(err)
 		}
-		err = writer.WriteBits(uint64(tri.length), lookaheadLengthExp)
+		err = bitwriter.WriteBits(uint64(tri.length), lz.LengthBits)
 		if err != nil {
 			log.Critical(err)
 		}
 		if tri.next {
-			err := writer.WriteByte(tri.nextChar)
+			err := bitwriter.WriteByte(tri.nextChar)
 			if err != nil {
 				log.Critical(err)
 			}
 		} else {
 			log.Debug("returning because there is no next")
-			_, err := writer.Align()
+			_, err := bitwriter.Align()
 			if err != nil {
 				log.Critical(err)
 			}
@@ -83,7 +85,7 @@ func Encode(text []byte, searchBufferLengthExp byte, lookaheadLengthExp byte, wr
 	}
 
 	log.Debug("returning because done")
-	_, err := writer.Align()
+	_, err := bitwriter.Align()
 	if err != nil {
 		log.Critical(err)
 	}

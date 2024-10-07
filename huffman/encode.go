@@ -15,6 +15,7 @@ func (h Huffman) Encode(text []byte, writer io.Writer) {
 	log.Infof("count map is: %v", cm)
 
 	bitwriter := bitio.NewWriter(writer)
+	defer bitwriter.Close()
 
 	tree := makeTree(cm)
 	log.Infof("tree is: %v", tree)

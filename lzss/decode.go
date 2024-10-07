@@ -1,8 +1,12 @@
 package lzss
 
-import "github.com/icza/bitio"
+import (
+	"github.com/icza/bitio"
+	"github.com/itepastra/codings/common"
+)
 
 func Decode(r *bitio.Reader) []byte {
+	defer common.HandleDecodePanic(log)
 	offsetExpTemp, err := r.ReadBits(6)
 	if err != nil {
 		log.Criticalf("offsetExp error %e", err)
